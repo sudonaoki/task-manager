@@ -6,9 +6,14 @@ import path from "path";
 import bodyParser from "body-parser";
 import { fileURLToPath } from "url";
 
+// -----------------------------------------
+// 基本設定
+// -----------------------------------------
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const PORT = 3000;
+
+// Render環境では PORT が自動で割り当てられる
+const PORT = process.env.PORT || 3000;
 
 // SQLite接続
 const dbPromise = open({
@@ -19,13 +24,16 @@ const dbPromise = open({
 app.use(express.static(path.join(__dirname, "public")));
 app.use(bodyParser.json());
 
-// ----------------------------
+// -----------------------------------------
 // ログイン
-// ----------------------------
+// -----------------------------------------
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   const db = await dbPromise;
-  const user = await db.get("SELECT * FROM users WHERE username = ? AND password = ?", [username, password]);
+  const user = await db.get(
+    "SELECT * FROM users WHERE username = ? AND password = ?",
+    [username, password]
+  );
 
   if (user) {
     res.json({ username: user.username });
@@ -34,18 +42,16 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// ----------------------------
+// -----------------------------------------
 // タスク CRUD
-// ----------------------------
+// -----------------------------------------
 app.get("/tasks", async (req, res) => {
   const db = await dbPromise;
   const tasks = await db.all("SELECT * FROM tasks ORDER BY id DESC");
   res.json(tasks);
 });
 
-// ----------------------------
 // タスク詳細取得
-// ----------------------------
 app.get("/tasks/:id", async (req, res) => {
   const db = await dbPromise;
   const task = await db.get("SELECT * FROM tasks WHERE id = ?", [req.params.id]);
@@ -60,7 +66,10 @@ app.get("/tasks/:id", async (req, res) => {
 app.post("/tasks", async (req, res) => {
   const { title, description } = req.body;
   const db = await dbPromise;
-  const result = await db.run("INSERT INTO tasks (title, description, completed) VALUES (?, ?, 0)", [title, description]);
+  const result = await db.run(
+    "INSERT INTO tasks (title, description, completed) VALUES (?, ?, 0)",
+    [title, description]
+  );
   res.json({ id: result.lastID });
 });
 
@@ -74,7 +83,13 @@ app.put("/tasks/:id", async (req, res) => {
        completed = COALESCE(?, completed),
        comments = COALESCE(?, comments)
      WHERE id = ?`,
-    [title, description, completed !== undefined ? (completed ? 1 : 0) : undefined, comments, req.params.id]
+    [
+      title,
+      description,
+      completed !== undefined ? (completed ? 1 : 0) : undefined,
+      comments,
+      req.params.id
+    ]
   );
   res.json({ message: "更新しました" });
 });
@@ -85,9 +100,9 @@ app.delete("/tasks/:id", async (req, res) => {
   res.json({ message: "削除しました" });
 });
 
-// ----------------------------
-// テンプレート
-// ----------------------------
+// -----------------------------------------
+// テンプレート関連
+// -----------------------------------------
 app.get("/templates", async (req, res) => {
   const db = await dbPromise;
   const templates = await db.all("SELECT * FROM templates ORDER BY id DESC");
@@ -96,10 +111,17 @@ app.get("/templates", async (req, res) => {
 
 app.get("/templates/:id", async (req, res) => {
   const db = await dbPromise;
-  const template = await db.get("SELECT * FROM templates WHERE id = ?", [req.params.id]);
-  if (!template) return res.status(404).json({ message: "テンプレートが存在しません" });
+  const template = await db.get(
+    "SELECT * FROM templates WHERE id = ?",
+    [req.params.id]
+  );
+  if (!template)
+    return res.status(404).json({ message: "テンプレートが存在しません" });
 
-  const tasks = await db.all("SELECT id, title, description FROM template_tasks WHERE template_id = ?", [req.params.id]);
+  const tasks = await db.all(
+    "SELECT id, title, description FROM template_tasks WHERE template_id = ?",
+    [req.params.id]
+  );
   res.json({ ...template, tasks });
 });
 
@@ -108,20 +130,32 @@ app.post("/templates", async (req, res) => {
   const db = await dbPromise;
 
   // 同名テンプレートがあれば上書き
-  const existing = await db.get("SELECT * FROM templates WHERE label = ?", [label]);
+  const existing = await db.get("SELECT * FROM templates WHERE label = ?", [
+    label
+  ]);
   let templateId;
   if (existing) {
     templateId = existing.id;
-    await db.run("DELETE FROM template_tasks WHERE template_id = ?", [templateId]);
-    await db.run("UPDATE templates SET label = ? WHERE id = ?", [label, templateId]);
+    await db.run("DELETE FROM template_tasks WHERE template_id = ?", [
+      templateId
+    ]);
+    await db.run("UPDATE templates SET label = ? WHERE id = ?", [
+      label,
+      templateId
+    ]);
   } else {
-    const result = await db.run("INSERT INTO templates (label) VALUES (?)", [label]);
+    const result = await db.run("INSERT INTO templates (label) VALUES (?)", [
+      label
+    ]);
     templateId = result.lastID;
   }
 
   if (Array.isArray(tasks)) {
     for (const t of tasks) {
-      await db.run("INSERT INTO template_tasks (template_id, title, description) VALUES (?, ?, ?)", [templateId, t.title, t.description]);
+      await db.run(
+        "INSERT INTO template_tasks (template_id, title, description) VALUES (?, ?, ?)",
+        [templateId, t.title, t.description]
+      );
     }
   }
 
@@ -131,13 +165,22 @@ app.post("/templates", async (req, res) => {
 app.put("/templates/:id", async (req, res) => {
   const { tasks } = req.body;
   const db = await dbPromise;
-  const template = await db.get("SELECT * FROM templates WHERE id = ?", [req.params.id]);
-  if (!template) return res.status(404).json({ message: "テンプレートが存在しません" });
+  const template = await db.get(
+    "SELECT * FROM templates WHERE id = ?",
+    [req.params.id]
+  );
+  if (!template)
+    return res.status(404).json({ message: "テンプレートが存在しません" });
 
-  await db.run("DELETE FROM template_tasks WHERE template_id = ?", [req.params.id]);
+  await db.run("DELETE FROM template_tasks WHERE template_id = ?", [
+    req.params.id
+  ]);
   if (Array.isArray(tasks)) {
     for (const t of tasks) {
-      await db.run("INSERT INTO template_tasks (template_id, title, description) VALUES (?, ?, ?)", [req.params.id, t.title, t.description]);
+      await db.run(
+        "INSERT INTO template_tasks (template_id, title, description) VALUES (?, ?, ?)",
+        [req.params.id, t.title, t.description]
+      );
     }
   }
   res.json({ message: "テンプレートを保存しました" });
@@ -145,16 +188,22 @@ app.put("/templates/:id", async (req, res) => {
 
 app.post("/templates/apply/:id", async (req, res) => {
   const db = await dbPromise;
-  const tasks = await db.all("SELECT title, description FROM template_tasks WHERE template_id = ?", [req.params.id]);
+  const tasks = await db.all(
+    "SELECT title, description FROM template_tasks WHERE template_id = ?",
+    [req.params.id]
+  );
   for (const t of tasks) {
-    await db.run("INSERT INTO tasks (title, description, completed) VALUES (?, ?, 0)", [t.title, t.description]);
+    await db.run(
+      "INSERT INTO tasks (title, description, completed) VALUES (?, ?, 0)",
+      [t.title, t.description]
+    );
   }
   res.json({ message: "テンプレートを適用しました" });
 });
 
-// ----------------------------
+// -----------------------------------------
 // サーバー起動
-// ----------------------------
+// -----------------------------------------
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });

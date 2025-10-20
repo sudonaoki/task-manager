@@ -76,6 +76,7 @@ app.post("/tasks", async (req, res) => {
 app.put("/tasks/:id", async (req, res) => {
   const { title, description, completed, comments } = req.body;
   const db = await dbPromise;
+
   await db.run(
     `UPDATE tasks SET
        title = COALESCE(?, title),
@@ -86,10 +87,11 @@ app.put("/tasks/:id", async (req, res) => {
     [title, description, completed !== undefined ? (completed ? 1 : 0) : undefined, comments, req.params.id]
   );
 
-  // 更新後のタスクを取得して返す
+  // 更新後のタスクを返す
   const updatedTask = await db.get("SELECT * FROM tasks WHERE id = ?", [req.params.id]);
   res.json(updatedTask);
 });
+
 
 app.delete("/tasks/:id", async (req, res) => {
   const db = await dbPromise;

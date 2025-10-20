@@ -140,6 +140,7 @@
             });
             if (!res.ok) throw new Error("更新に失敗しました");
 
+            // 更新後のタスク情報を取得
             const updated = await res.json();
             currentCompleted = updated.completed === 1 || updated.completed === true;
 

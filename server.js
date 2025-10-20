@@ -83,15 +83,12 @@ app.put("/tasks/:id", async (req, res) => {
        completed = COALESCE(?, completed),
        comments = COALESCE(?, comments)
      WHERE id = ?`,
-    [
-      title,
-      description,
-      completed !== undefined ? (completed ? 1 : 0) : undefined,
-      comments,
-      req.params.id
-    ]
+    [title, description, completed !== undefined ? (completed ? 1 : 0) : undefined, comments, req.params.id]
   );
-  res.json({ message: "更新しました" });
+
+  // 更新後のタスクを取得して返す
+  const updatedTask = await db.get("SELECT * FROM tasks WHERE id = ?", [req.params.id]);
+  res.json(updatedTask);
 });
 
 app.delete("/tasks/:id", async (req, res) => {

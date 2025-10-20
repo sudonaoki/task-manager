@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>タスク管理システム</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #1976d2;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    main {
+      max-width: 700px;
+      margin: 2rem auto 5rem auto;
+      padding: 1rem;
+    }
+
+    .task-card {
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .task-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .task-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+    }
+
+    .task-description {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 0.5rem;
+      white-space: pre-wrap;
+    }
+
+    .completed {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    .btn-detail {
+      margin: 0.3rem 0.2rem;
+      padding: 0.4rem 1rem;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .btn-detail.detail {
+      background-color: #4caf50;
+    }
+
+    .btn-detail.detail:hover {
+      background-color: #388e3c;
+    }
+
+    .btn-detail.edit {
+      background-color: #1976d2;
+    }
+
+    .btn-detail.edit:hover {
+      background-color: #0d47a1;
+    }
+
+    .comment-section {
+      margin-top: 0.5rem;
+    }
+
+    .comment-section textarea {
+      width: 100%;
+      height: 50px;
+      padding: 0.5rem;
+      font-size: 0.9rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      background: #fafafa;
+    }
+
+    .add-task-form {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      z-index: 10;
+      max-width: 95%;
+    }
+
+    .add-task-form button {
+      padding: 0.6rem 1.2rem;
+      background-color: #ff9800;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      flex: 1 1 auto;
+      min-width: 160px;
+    }
+
+    .add-task-form button:hover {
+      background-color: #f57c00;
+    }
+
+    @media (max-width: 480px) {
+      .add-task-form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .add-task-form button {
+        width: 100%;
+      }
+    }
+
+    .template-buttons {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .template-buttons button {
+      margin: 0.2rem;
+      padding: 0.4rem 0.8rem;
+      background-color: #2196f3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .template-buttons button:hover {
+      background-color: #1565c0;
+    }
+
+    .delete-button {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 20px;
+      color: #888;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .delete-button:hover {
+      color: #e53935;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: flex-start;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>📝 タスク管理画面（業界汎用対応）</h1>
+  </header>
+
+  <main>
+    <section class="template-buttons" id="template-buttons">
+      <p>テンプレートを読み込み中...</p>
+    </section>
+
+    <div id="task-container"><p>読み込み中...</p></div>
+  </main>
+
+  <section class="add-task-form">
+    <button onclick="location.href='task-form.html'">＋ 新しいタスクを追加</button>
+    <button onclick="location.href='template-form.html'">テンプレートを登録</button>
+    <button onclick="location.href='template-edit.html'">テンプレートを編集</button>
+  </section>
+
+  <script>
+    const container = document.getElementById("task-container");
+
+    async function fetchTasks() {
+      const res = await fetch("/tasks");
+      const tasks = await res.json();
+      container.innerHTML = "";
+
+      tasks.forEach(task => {
+        const card = document.createElement("div");
+        card.className = "task-card";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-button";
+        deleteBtn.textContent = "✕";
+        deleteBtn.title = "タスクを削除";
+        deleteBtn.addEventListener("click", async () => {
+          if (confirm("このタスクを削除しますか？")) {
+            await fetch(`/tasks/${task.id}`, { method: "DELETE" });
+            fetchTasks();
+          }
+        });
+        card.appendChild(deleteBtn);
+
+        const title = document.createElement("div");
+        title.className = "task-title";
+        title.textContent = task.title || "(無題)";
+
+        const row = document.createElement("div");
+        row.className = "task-row";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = !!task.completed;
+
+        checkbox.addEventListener("change", async () => {
+          await fetch(`/tasks/${task.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ completed: checkbox.checked })
+          });
+          title.classList.toggle("completed", checkbox.checked);
+        });
+
+        if (task.completed) {
+          title.classList.add("completed");
+        }
+
+        row.appendChild(checkbox);
+        row.appendChild(title);
+
+        const buttonRow = document.createElement("div");
+        buttonRow.className = "button-row";
+
+        const detailBtn = document.createElement("button");
+        detailBtn.textContent = "詳細へ";
+        detailBtn.className = "btn-detail detail";
+        detailBtn.addEventListener("click", () => {
+          location.href = `task-detail.html?id=${task.id}`;
+        });
+
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "編集";
+        editBtn.className = "btn-detail edit";
+        editBtn.addEventListener("click", () => {
+          location.href = `task-form.html?id=${task.id}`;
+        });
+
+        buttonRow.appendChild(detailBtn);
+        buttonRow.appendChild(editBtn);
+
+        const commentSection = document.createElement("div");
+        commentSection.className = "comment-section";
+
+        const commentBox = document.createElement("textarea");
+        commentBox.placeholder = "コメントを入力...";
+        commentBox.value = task.comments || "";
+
+        commentBox.addEventListener("input", async () => {
+          await fetch(`/tasks/${task.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ comments: commentBox.value })
+          });
+        });
+
+        commentSection.appendChild(commentBox);
+
+        card.appendChild(row);
+        card.appendChild(buttonRow);
+        card.appendChild(commentSection);
+        container.appendChild(card);
+      });
+    }
+
+    async function loadTemplateButtons() {
+      const res = await fetch("/templates");
+      const templates = await res.json();
+      const container = document.getElementById("template-buttons");
+      container.innerHTML = "";
+
+      templates.forEach(t => {
+        const button = document.createElement("button");
+        button.textContent = t.label || "(無名テンプレート)";
+        button.addEventListener("click", async () => {
+          const res = await fetch(`/templates/apply/${t.id}`, { method: "POST" });
+          if (res.ok) {
+            alert(`${t.label} の仕事を追加しました`);
+            fetchTasks();
+          } else {
+            alert("テンプレート適用に失敗しました");
+          }
+        });
+        container.appendChild(button);
+      });
+    }
+
+    fetchTasks();
+    loadTemplateButtons();
+  </script>
+</body>
+</html>

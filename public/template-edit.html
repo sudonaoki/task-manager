@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>テンプレート編集</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #1976d2;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+
+    select {
+      width: 100%;
+      font-size: 1rem;
+      padding: 0.5rem;
+      margin-bottom: 1.5rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      background-color: white;
+    }
+
+    .task-card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 1rem;
+      position: relative;
+      margin-bottom: 1rem;
+    }
+
+    .task-card label {
+      display: block;
+      font-weight: bold;
+      margin-top: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .task-card input,
+    .task-card textarea {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: #fafafa;
+    }
+
+    .task-card textarea {
+      resize: vertical;
+      min-height: 50px;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      background: transparent;
+      border: none;
+      color: #ef4444;
+      font-size: 1.2rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .delete-btn:hover {
+      color: #dc2626;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+    }
+
+    .button-row button {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #save-btn {
+      background-color: #4caf50;
+      color: white;
+    }
+
+    #save-btn:hover {
+      background-color: #388e3c;
+    }
+
+    #back-btn {
+      background-color: #e5e7eb;
+      color: #1f2937;
+    }
+
+    #back-btn:hover {
+      background-color: #d1d5db;
+    }
+
+    #save-btn:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📄 テンプレート編集</h1>
+  </header>
+
+  <main>
+    <select id="template-select">
+      <option value="">テンプレートを選択してください</option>
+    </select>
+
+    <div id="template-container">
+      <p>テンプレートが表示されます</p>
+    </div>
+
+    <div class="button-row">
+      <button id="back-btn">戻る</button>
+      <button id="save-btn" disabled>保存</button>
+    </div>
+  </main>
+
+  <script>
+    const select = document.getElementById("template-select");
+    const container = document.getElementById("template-container");
+    const saveButton = document.getElementById("save-btn");
+    const backButton = document.getElementById("back-btn");
+
+    let currentTemplateId = null;
+    let tasks = [];
+
+    async function loadTemplates() {
+      try {
+        const res = await fetch('/templates');
+        const data = await res.json();
+
+        select.innerHTML = '<option value="">テンプレートを選択してください</option>';
+        data.forEach(tpl => {
+          const option = document.createElement("option");
+          option.value = tpl.id;
+          option.textContent = tpl.label || "(無名テンプレート)";
+          select.appendChild(option);
+        });
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = "<p>テンプレートの読み込みに失敗しました</p>";
+      }
+    }
+
+    select.addEventListener("change", async () => {
+      const id = select.value;
+      container.innerHTML = "";
+      saveButton.disabled = true;
+      currentTemplateId = null;
+      tasks = [];
+
+      if (!id) return;
+
+      try {
+        const res = await fetch(`/templates/${id}`);
+        const tpl = await res.json();
+        if (!tpl) {
+          container.innerHTML = "<p>テンプレートが見つかりません</p>";
+          return;
+        }
+
+        currentTemplateId = id;
+        tasks = tpl.tasks || [];
+        renderCards();
+        saveButton.disabled = false;
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = "<p>テンプレートの読み込みに失敗しました</p>";
+      }
+    });
+
+    function renderCards() {
+      container.innerHTML = "";
+      tasks.forEach((task, i) => {
+        const card = document.createElement("div");
+        card.className = "task-card";
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "×";
+        delBtn.className = "delete-btn";
+        delBtn.addEventListener("click", () => {
+          tasks.splice(i, 1);
+          renderCards();
+        });
+
+        const titleLabel = document.createElement("label");
+        titleLabel.textContent = "タスク名";
+        const titleInput = document.createElement("input");
+        titleInput.value = task.title;
+        titleInput.addEventListener("input", e => { tasks[i].title = e.target.value; });
+
+        const detailLabel = document.createElement("label");
+        detailLabel.textContent = "詳細";
+        const detailInput = document.createElement("textarea");
+        detailInput.value = task.description || "";
+        detailInput.addEventListener("input", e => { tasks[i].description = e.target.value; });
+
+        card.appendChild(delBtn);
+        card.appendChild(titleLabel);
+        card.appendChild(titleInput);
+        card.appendChild(detailLabel);
+        card.appendChild(detailInput);
+        container.appendChild(card);
+      });
+    }
+
+    saveButton.addEventListener("click", async () => {
+      if (!currentTemplateId) return;
+
+      try {
+        const res = await fetch(`/templates/${currentTemplateId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tasks: tasks.filter(t => t.title.trim() !== "") })
+        });
+        if (!res.ok) throw new Error('保存に失敗しました');
+        alert("テンプレートを保存しました");
+        loadTemplates(); // 更新後に再読み込み
+      } catch (e) {
+        console.error(e);
+        alert("保存エラー: " + e.message);
+      }
+    });
+
+    backButton.addEventListener("click", () => { location.href = "task.html"; });
+
+    loadTemplates();
+  </script>
+</body>
+</html>

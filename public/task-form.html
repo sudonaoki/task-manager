@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>タスク追加・編集</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #1976d2;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    main {
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-top: 1rem;
+    }
+
+    input, textarea {
+      width: 100%;
+      font-size: 1rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: #fafafa;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .button-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.5rem;
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #save-btn {
+      background-color: #4caf50;
+      color: white;
+    }
+    #save-btn:hover { background-color: #388e3c; }
+
+    #back-btn {
+      background-color: #e5e7eb;
+      color: #1f2937;
+    }
+    #back-btn:hover { background-color: #d1d5db; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📝 タスク追加・編集</h1>
+  </header>
+
+  <main>
+    <label for="title">タイトル</label>
+    <input id="title" type="text" placeholder="タスク名を入力" />
+
+    <label for="description">詳細</label>
+    <textarea id="description" placeholder="詳細を入力（任意）"></textarea>
+
+    <div class="button-row">
+      <button id="back-btn">戻る</button>
+      <button id="save-btn">保存</button>
+    </div>
+  </main>
+
+  <script>
+    const titleInput = document.getElementById("title");
+    const descInput = document.getElementById("description");
+    const saveButton = document.getElementById("save-btn");
+    const backButton = document.getElementById("back-btn");
+
+    const params = new URLSearchParams(window.location.search);
+    const taskId = params.get("id"); // 編集時のみ
+
+    // 編集時は既存データをロード
+    if (taskId) {
+      fetch(`/tasks`)
+        .then(res => res.json())
+        .then(tasks => {
+          const task = tasks.find(t => t.id == taskId);
+          if (task) {
+            titleInput.value = task.title;
+            descInput.value = task.description || "";
+          }
+        })
+        .catch(err => console.error("読み込みエラー:", err));
+    }
+
+    // 保存ボタン
+    saveButton.addEventListener("click", async () => {
+      const title = titleInput.value.trim();
+      const description = descInput.value.trim();
+      if (!title) {
+        alert("タイトルを入力してください");
+        return;
+      }
+
+      try {
+        if (taskId) {
+          // 編集モード
+          await fetch(`/tasks/${taskId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, description })
+          });
+          alert("タスクを更新しました");
+        } else {
+          // 新規追加
+          await fetch("/tasks", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, description })
+          });
+          alert("タスクを追加しました");
+        }
+        location.href = "task.html";
+      } catch (err) {
+        console.error(err);
+        alert("保存に失敗しました");
+      }
+    });
+
+    backButton.addEventListener("click", () => {
+      location.href = "task.html";
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>テンプレート登録</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+      background-color: #f1f5f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #1976d2;
+      color: white;
+      padding: 1.5rem 2rem;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    header h1 { margin: 0; font-size: 1.6rem; font-weight: bold; }
+
+    main { display: flex; justify-content: center; padding: 2rem; }
+
+    .card {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 600px;
+    }
+
+    label { display: block; margin-top: 1rem; font-weight: 600; color: #334155; }
+    input, textarea {
+      width: 100%; padding: 0.75rem; margin-top: 0.5rem;
+      border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem;
+      background: #f8fafc; color: #0f172a;
+    }
+    textarea { resize: vertical; }
+
+    .note { margin-top: 0.5rem; font-size: 0.85rem; color: #64748b; }
+
+    .button {
+      width: 100%; margin-top: 1.5rem; padding: 0.9rem;
+      background-color: #3b82f6; color: white; border: none; border-radius: 8px;
+      font-size: 1rem; cursor: pointer; transition: background-color 0.2s ease-in-out;
+    }
+    .button:hover { background-color: #2563eb; }
+
+    ul#taskList { list-style: disc; padding-left: 1.2rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📋 テンプレート登録</h1>
+  </header>
+
+  <main>
+    <div class="card">
+      <label for="label">テンプレート名（例：月曜シフト・開店準備など）</label>
+      <input type="text" id="label" placeholder="テンプレート名を入力" />
+
+      <label for="title">タスク名</label>
+      <input type="text" id="title" placeholder="例：レジ準備" />
+
+      <label for="description">詳細</label>
+      <textarea id="description" rows="3" placeholder="例：レジ金を数えてセット"></textarea>
+
+      <button class="button" onclick="addToList()">タスクリストに追加</button>
+
+      <ul id="taskList"></ul>
+
+      <p class="note">※ 同名テンプレートが存在する場合は上書きされます。</p>
+      <button class="button" onclick="saveTemplate()">保存する</button>
+    </div>
+  </main>
+
+  <div style="margin: 0 0 2rem 2rem;">
+    <button class="button" onclick="location.href='task.html'" style="width:auto; padding: 0.6rem 1.2rem;">戻る</button>
+  </div>
+
+  <script>
+    const taskList = [];
+
+    function addToList() {
+      const title = document.getElementById("title").value.trim();
+      const description = document.getElementById("description").value.trim();
+
+      if (!title) { alert("タスク名を入力してください。"); return; }
+
+      taskList.push({ title, description });
+      renderList();
+      document.getElementById("title").value = "";
+      document.getElementById("description").value = "";
+    }
+
+    function renderList() {
+      const ul = document.getElementById("taskList");
+      ul.innerHTML = "";
+      taskList.forEach(task => {
+        const li = document.createElement("li");
+        li.textContent = `${task.title} - ${task.description}`;
+        ul.appendChild(li);
+      });
+    }
+
+    async function saveTemplate() {
+      const label = document.getElementById("label").value.trim();
+      if (!label || taskList.length === 0) {
+        alert("テンプレート名とタスクを入力してください。");
+        return;
+      }
+
+      try {
+        // SQLite 用: POST /templates
+        const res = await fetch('/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label, tasks: taskList })
+        });
+
+        if (!res.ok) throw new Error('保存に失敗しました');
+        alert('テンプレートを保存しました！');
+        taskList.length = 0;
+        renderList();
+        document.getElementById("label").value = "";
+      } catch (e) {
+        console.error(e);
+        alert('保存エラー: ' + e.message);
+      }
+    }
+  </script>
+</body>
+</html>

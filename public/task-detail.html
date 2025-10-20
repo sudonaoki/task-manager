@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>タスク詳細</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #1976d2;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
+    main {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #ffffff;
+      margin-bottom: 1rem;
+    }
+
+    .status-box {
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-completed {
+      background-color: #e6f4ea;
+      color: #2e7d32;
+      border-left: 6px solid #66bb6a;
+    }
+
+    .status-pending {
+      background-color: #fff8e1;
+      color: #ef6c00;
+      border: 2px dashed #ff9800;
+    }
+
+    .description {
+      font-size: 1rem;
+      color: #333;
+      background-color: #f9f9f9;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    button {
+      padding: 0.6rem 1.2rem;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #388e3c;
+    }
+
+    a {
+      display: inline-block;
+      margin-top: 2rem;
+      color: #1976d2;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📝 タスク詳細</h1>
+  </header>
+
+  <main id="task-detail">
+    <h1>読み込み中...</h1>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const taskId = params.get("id");
+    const container = document.getElementById("task-detail");
+
+    async function loadTask() {
+      if (!taskId) {
+        container.innerHTML = "<h1>タスクIDが指定されていません</h1>";
+        return;
+      }
+
+      try {
+        const res = await fetch(`/tasks/${taskId}`);
+        if (!res.ok) throw new Error("タスクが見つかりませんでした");
+        const task = await res.json();
+
+        const title = task.title || "無題";
+        const description = task.description || "（説明なし）";
+        let currentCompleted = task.completed === 1 || task.completed === true;
+
+        const statusText = currentCompleted ? "✅ 完了しています" : "🔄 未完了です";
+        const statusClass = currentCompleted ? "status-box status-completed" : "status-box status-pending";
+
+        container.innerHTML = `
+          <h1>${title}</h1>
+          <div id="status-box" class="${statusClass}">${statusText}</div>
+
+          <h2 style="margin-top: 2rem; font-size: 1.2rem; color: #333;">📝 詳細</h2>
+          <div class="description">${description}</div>
+
+          <button id="toggle-btn">完了状態を切り替える</button>
+          <br><br>
+          <a href="task.html">← タスク一覧に戻る</a>
+        `;
+
+        // 完了状態切り替えボタン
+        document.getElementById("toggle-btn").onclick = async () => {
+          try {
+            const res = await fetch(`/tasks/${taskId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ completed: !currentCompleted })
+            });
+            if (!res.ok) throw new Error("更新に失敗しました");
+
+            const updated = await res.json();
+            currentCompleted = updated.completed === 1 || updated.completed === true;
+
+            const newText = currentCompleted ? "✅ 完了しています" : "🔄 未完了です";
+            const newClass = currentCompleted ? "status-box status-completed" : "status-box status-pending";
+
+            const statusBox = document.getElementById("status-box");
+            statusBox.textContent = newText;
+            statusBox.className = newClass;
+          } catch (e) {
+            alert("更新エラー：" + e.message);
+          }
+        };
+      } catch (e) {
+        container.innerHTML = `<h1>${e.message}</h1>`;
+      }
+    }
+
+    loadTask();
+  </script>
+</body>
+</html>

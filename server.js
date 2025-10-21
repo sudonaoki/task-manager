@@ -76,7 +76,6 @@ app.post("/tasks", async (req, res) => {
 app.put("/tasks/:id", async (req, res) => {
   const { title, description, completed, comments } = req.body;
   const db = await dbPromise;
-
   await db.run(
     `UPDATE tasks SET
        title = COALESCE(?, title),
@@ -84,14 +83,16 @@ app.put("/tasks/:id", async (req, res) => {
        completed = COALESCE(?, completed),
        comments = COALESCE(?, comments)
      WHERE id = ?`,
-    [title, description, completed !== undefined ? (completed ? 1 : 0) : undefined, comments, req.params.id]
+    [
+      title,
+      description,
+      completed !== undefined ? (completed ? 1 : 0) : undefined,
+      comments,
+      req.params.id
+    ]
   );
-
-  // 更新後のタスクを返す
-  const updatedTask = await db.get("SELECT * FROM tasks WHERE id = ?", [req.params.id]);
-  res.json(updatedTask);
+  res.json({ message: "更新しました" });
 });
-
 
 app.delete("/tasks/:id", async (req, res) => {
   const db = await dbPromise;

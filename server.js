@@ -210,6 +210,13 @@ app.post("/templates/apply/:id", async (req, res) => {
   res.json({ message: "テンプレートを適用しました" });
 });
 
+app.delete("/templates/:id", async (req, res) => {
+  const db = await dbPromise;
+  await db.run("DELETE FROM templates WHERE id = ?", [req.params.id]);
+  res.json({ message: "テンプレートを削除しました" });
+});
+
+
 // -----------------------------------------
 // サーバー起動
 // -----------------------------------------

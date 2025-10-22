@@ -124,6 +124,15 @@
       background-color: #d1d5db;
     }
 
+    #delete-template-btn {
+      background-color: #ef4444;
+      color: white;
+    }
+
+    #delete-template-btn:hover {
+      background-color: #dc2626;
+    }
+
     #save-btn:disabled {
       background-color: #94a3b8;
       cursor: not-allowed;
@@ -148,6 +157,7 @@
       <button id="back-btn">戻る</button>
       <button id="add-task-btn">＋ タスクを追加</button>
       <button id="save-btn" disabled>保存</button>
+      <button id="delete-template-btn" disabled>削除</button>
     </div>
   </main>
 
@@ -157,6 +167,7 @@
     const saveButton = document.getElementById("save-btn");
     const addTaskButton = document.getElementById("add-task-btn");
     const backButton = document.getElementById("back-btn");
+    const deleteButton = document.getElementById("delete-template-btn");
 
     let currentTemplateId = null;
     let tasks = [];
@@ -183,6 +194,7 @@
       const id = select.value;
       container.innerHTML = "";
       saveButton.disabled = true;
+      deleteButton.disabled = true;
       currentTemplateId = null;
       tasks = [];
 
@@ -200,6 +212,7 @@
         tasks = tpl.tasks || [];
         renderCards();
         saveButton.disabled = false;
+        deleteButton.disabled = false;
       } catch (e) {
         console.error(e);
         container.innerHTML = "<p>テンプレートの読み込みに失敗しました</p>";
@@ -241,7 +254,6 @@
       });
     }
 
-    // 🔹 新しいタスクを追加する機能
     addTaskButton.addEventListener("click", () => {
       if (!currentTemplateId) {
         alert("テンプレートを選択してください。");
@@ -256,7 +268,7 @@
 
       try {
         const res = await fetch(`/templates/${currentTemplateId}`, {
-          method: 'PUT', // ← 修正済み: 本来は PUT
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tasks: tasks.filter(t => t.title.trim() !== "") })
         });
@@ -266,6 +278,26 @@
       } catch (e) {
         console.error(e);
         alert("保存エラー: " + e.message);
+      }
+    });
+
+    deleteButton.addEventListener("click", async () => {
+      if (!currentTemplateId) return;
+      if (!confirm("このテンプレートを削除しますか？")) return;
+
+      try {
+        const res = await fetch(`/templates/${currentTemplateId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('削除に失敗しました');
+        alert("テンプレートを削除しました");
+        currentTemplateId = null;
+        tasks = [];
+        container.innerHTML = "<p>テンプレートが削除されました</p>";
+        saveButton.disabled = true;
+        deleteButton.disabled = true;
+        loadTemplates();
+      } catch (e) {
+        console.error(e);
+        alert("削除エラー: " + e.message);
       }
     });
 

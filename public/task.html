@@ -308,7 +308,9 @@
     function enableDragAndDrop() {
       new Sortable(container, {
         animation: 150,
-        handle: ".task-title",
+        // handle は削除（これで全体がドラッグ可能に）
+        filter: "button, textarea, input", // ← 除外したい要素
+        preventOnFilter: false,
         onEnd: async () => {
           const newOrder = [...container.children].map((card, index) => ({
             id: card.dataset.id,
@@ -323,6 +325,7 @@
         }
       });
     }
+
 
     async function loadTemplateButtons() {
       const res = await fetch("/templates");

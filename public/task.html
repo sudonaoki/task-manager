@@ -32,6 +32,7 @@
       padding: 1rem 1.5rem;
       margin-bottom: 1.5rem;
       position: relative;
+      cursor: grab;
     }
 
     .task-row {
@@ -183,11 +184,13 @@
       margin-top: 0.5rem;
     }
   </style>
+  <!-- SortableJS を読み込み -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 </head>
 <body>
 
   <header>
-    <h1>📝 タスク管理画面（業界汎用対応）</h1>
+    <h1>📝 タスク管理画面（ドラッグで並べ替え可能）</h1>
   </header>
 
   <main>
@@ -215,6 +218,7 @@
       tasks.forEach(task => {
         const card = document.createElement("div");
         card.className = "task-card";
+        card.dataset.id = task.id; // 並べ替えで使うID
 
         const deleteBtn = document.createElement("button");
         deleteBtn.className = "delete-button";
@@ -296,6 +300,27 @@
         card.appendChild(buttonRow);
         card.appendChild(commentSection);
         container.appendChild(card);
+      });
+
+      enableDragAndDrop();
+    }
+
+    function enableDragAndDrop() {
+      new Sortable(container, {
+        animation: 150,
+        handle: ".task-title",
+        onEnd: async () => {
+          const newOrder = [...container.children].map((card, index) => ({
+            id: card.dataset.id,
+            order: index
+          }));
+
+          await fetch("/tasks/reorder", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ order: newOrder })
+          });
+        }
       });
     }
 

@@ -100,6 +100,15 @@ app.delete("/tasks/:id", async (req, res) => {
   res.json({ message: "削除しました" });
 });
 
+app.post("/tasks/reorder", (req, res) => {
+  const { order } = req.body; // [{ id: 1, order: 0 }, ...]
+  const stmt = db.prepare("UPDATE tasks SET `order` = ? WHERE id = ?");
+  order.forEach(o => stmt.run(o.order, o.id));
+  stmt.finalize();
+  res.json({ success: true });
+});
+
+
 // -----------------------------------------
 // テンプレート関連
 // -----------------------------------------
